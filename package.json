@@ -1,0 +1,22 @@
+{
+  "name": "collab-mcp",
+  "version": "0.1.0",
+  "description": "Collaborator MCP Server — exposes accumulated context and judgment to AI tools",
+  "type": "module",
+  "bin": {
+    "collab-mcp": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.33",
+    "typescript": "^5.9.3"
+  }
+}
