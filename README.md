@@ -1,82 +1,88 @@
-# collab-mcp
+# openclaw-mcp
 
-**Collaborator MCP Server** — bring your Collaborator's accumulated context and judgment into any MCP-compatible AI tool.
+Pull any [OpenClaw](https://github.com/openclaw/openclaw) agent into MCP-compatible tools — Claude Code, Codex, Cursor, or anything that speaks MCP.
 
-## What is this?
+Point it at an OpenClaw workspace and it exposes three tools:
 
-When everything is buildable, the bottleneck becomes knowing the *right* thing to build. Collaborator helps you decide what and why. `/collab` brings that judgment into the tools you're already building with.
+- **agent-bootstrap** — Load the agent's persona, context, memory, and current state. The agent's identity comes from its workspace files (`SOUL.md`, `USER.md`, `MEMORY.md`, etc.).
+- **recall** — Search the agent's memory and connected notes (local files + Seedvault if configured).
+- **record** — Write observations, decisions, and lessons back into the agent's memory.
 
-This MCP server exposes two tools:
+## How it works
 
-- **`collab-bootstrap`** — Returns a synthesized context payload: persona, user context, active goals, and recent state. Think of it as your Collaborator briefing you on what matters right now.
-- **`recall`** — Search the Collaborator's workspace files by keyword. When you need to pull specific context from notes, goals, or memory.
+An OpenClaw agent's workspace is a folder of markdown files with a known schema:
 
-## Quick Start
-
-### Claude Code (SSE transport)
-```bash
-claude mcp add collab-mcp --transport sse "https://your-server.example.com/mcp/sse?key=YOUR_API_KEY"
+```
+workspace/
+├── SOUL.md          # Who the agent is
+├── USER.md          # Who it's working with
+├── IDENTITY.md      # Name, emoji, avatar
+├── AGENTS.md        # Operating instructions
+├── MEMORY.md        # Long-term memory
+├── memory/          # Daily notes (YYYY-MM-DD.md)
+├── notes/           # Check-in notes
+└── initiative/      # Initiative pipeline output
+    └── output/
+        └── YYYY-MM-DD/
+            └── initiative_brief.md
 ```
 
-### Codex (Streamable HTTP)
-```bash
-codex mcp add collab-mcp --url "https://your-server.example.com/mcp?key=YOUR_API_KEY"
-```
-
-### stdio (local)
-```bash
-COLLAB_WORKSPACE=/path/to/workspace node build/index.js
-```
+This server reads those files and exposes them via MCP. Any MCP-compatible tool can invoke the agent's persona, search its memory, and write back to it.
 
 ## Setup
 
 ```bash
+# Clone
+git clone https://github.com/collaborator-ai/collab-mcp.git
+cd collab-mcp
 npm install
-npm run build
+
+# Configure
+export OPENCLAW_WORKSPACE=/path/to/agent/workspace
+export OPENCLAW_AUTH_TOKEN=your-api-key
+
+# Optional: Seedvault integration
+export SV_SERVER=https://seedvault.fly.dev
+export SV_TOKEN=your-seedvault-token
+export SV_CONTRIBUTOR=contributor-name
+
+# Run
+npx tsx src/index.ts
 ```
 
-### Environment Variables
-
-| Variable | Description | Default |
-|---|---|---|
-| `COLLAB_WORKSPACE` | Path to the Collaborator workspace | `~/.openclaw/workspace` |
-| `COLLAB_AUTH_TOKEN` | API key for SSE/HTTP transports | *(none)* |
-| `PORT` | Server port | `3100` |
-| `TRANSPORT` | Transport mode: `stdio`, `sse` | `sse` |
-| `PUBLIC_URL` | Public URL (for OAuth metadata) | `http://localhost:3100` |
-| `SV_SERVER` | Seedvault server URL | `https://seedvault.fly.dev` |
-| `SV_TOKEN` | Seedvault contributor token | *(none)* |
-
-### Running
+### Connect to Claude Code (SSE)
 
 ```bash
-# SSE mode (Claude Code, remote access)
-COLLAB_AUTH_TOKEN=your-secret TRANSPORT=sse npm start
-
-# stdio mode (local piping)
-TRANSPORT=stdio npm start
+claude mcp add my-agent --transport sse "http://localhost:3100/mcp/sse?key=YOUR_TOKEN"
 ```
 
-## Architecture
+### Connect to Codex (Streamable HTTP)
 
-This server is the **invocation layer** of a two-part system:
+```bash
+codex mcp add my-agent --url "http://localhost:3100/mcp?key=YOUR_TOKEN"
+```
 
-1. **Collaborator process** (continuous) — watches input streams, maintains context, develops perspective
-2. **`/collab` MCP server** (this repo) — exposes that accumulated understanding to any MCP-compatible tool
+### Remote access
 
-The server reads from the Collaborator's workspace files (SOUL.md, USER.md, GOALS.md, memory/, notes/) and synthesizes them into a coherent briefing. The Collaborator process does the reading and thinking; `/collab` delivers it.
+For remote access, set up a tunnel (e.g., Cloudflare Tunnel) and configure:
 
-## Transports
+```bash
+export PUBLIC_URL=https://your-tunnel-url.example.com
+```
 
-- **SSE** — Server-Sent Events, works with Claude Code. Auth via `?key=` query param.
-- **Streamable HTTP** — Works with Codex and other HTTP-based MCP clients. Auth via `?key=` query param.
-- **stdio** — Standard I/O piping for local use. No auth needed.
-- **OAuth 2.1** — For Claude Desktop app (WIP).
+## Environment Variables
 
-## Part of [Collaborator](https://collaborator.bot)
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENCLAW_WORKSPACE` | Yes | Path to the OpenClaw agent's workspace directory |
+| `OPENCLAW_AUTH_TOKEN` | Recommended | API key for authenticating MCP connections |
+| `PORT` | No | Server port (default: 3100) |
+| `TRANSPORT` | No | `sse` or `stdio` (default: `sse`) |
+| `PUBLIC_URL` | No | Public URL for OAuth/remote access |
+| `SV_SERVER` | No | Seedvault server URL |
+| `SV_TOKEN` | No | Seedvault API token |
+| `SV_CONTRIBUTOR` | No | Seedvault contributor to search |
 
-*Thinks for itself. Creates with you.*
+## License
 
----
-
-Built by [Collaborator AI](https://github.com/collaborator-ai)
+MIT
