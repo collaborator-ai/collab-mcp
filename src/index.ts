@@ -116,6 +116,23 @@ async function getLatestActions(): Promise<string> {
   }
 }
 
+async function getLatestOntologySynthesis(): Promise<string> {
+  const outputDir = join(WORKSPACE, "collaborator", "ontology", "output");
+  try {
+    const entries = await readdir(outputDir);
+    const dated = entries.filter((e: string) => /^\d{4}-\d{2}-\d{2}$/.test(e)).sort().reverse();
+    for (const dir of dated) {
+      const synthesisPath = join(outputDir, dir, "ontology_synthesis.md");
+      try {
+        return await readFile(synthesisPath, "utf-8");
+      } catch { continue; }
+    }
+    return "";
+  } catch {
+    return "";
+  }
+}
+
 async function searchSeedvault(query: string): Promise<string> {
   if (!SV_TOKEN) return "Seedvault not configured.";
   try {
@@ -180,6 +197,12 @@ function createCollabServer(): McpServer {
       const actionsContent = await getLatestActions();
       if (actionsContent) {
         sections.push(`\n## Current Actions\n\nThese are the highest-priority actions from your latest reflection pipeline run. Use them to inform what you propose doing in this session.\n\n${actionsContent}`);
+      }
+
+      // Load ontology synthesis if available
+      const ontology = await getLatestOntologySynthesis();
+      if (ontology) {
+        sections.push(`\n## Ontology\n\nThis is the current map of your human's thinking — entities, relations, and alignments (confirmations and tensions). Use it to inform your judgment.\n\n${ontology}`);
       }
 
       sections.push(`\n---
