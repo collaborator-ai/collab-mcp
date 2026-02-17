@@ -116,36 +116,6 @@ async function searchSeedvault(query: string): Promise<string> {
   }
 }
 
-// --- Stance Extraction ---
-
-function extractStances(memory: string, recentNotes: string, checkIns: string): string {
-  // Pull out opinions, decisions, and active positions from context
-  const allText = [memory, recentNotes, checkIns].join("\n");
-  const lines = allText.split("\n");
-
-  const stanceMarkers = [
-    "think", "believe", "disagree", "pushed back", "skeptical",
-    "convinced", "wrong", "right approach", "should", "shouldn't",
-    "the real", "actually", "not a", "is a", "key differentiator",
-    "problem statement", "decision", "landed", "critical",
-    "lesson", "mistake", "important", "matters"
-  ];
-
-  const stanceLines = lines.filter((line: string) => {
-    const lower = line.toLowerCase();
-    // Skip headers, empty lines, and very short lines
-    if (line.startsWith("#") || line.trim().length < 20) return false;
-    return stanceMarkers.some(marker => lower.includes(marker));
-  });
-
-  if (stanceLines.length === 0) return "_No active stances extracted._";
-
-  // Deduplicate and limit
-  const unique = [...new Set(stanceLines)].slice(0, 25);
-  return "These are things you (Collin) currently think, believe, or have decided:\n\n" +
-    unique.map(l => l.trim().startsWith("-") ? l.trim() : `- ${l.trim()}`).join("\n");
-}
-
 // --- MCP Server Factory ---
 
 function createCollabServer(): McpServer {
@@ -159,69 +129,41 @@ function createCollabServer(): McpServer {
     "Load an OpenClaw agent's persona, context, memory, and current state. Call this first when invoking the agent in a coding tool. The agent's identity comes from its workspace files (SOUL.md, USER.md, MEMORY.md, etc.).",
     {},
     async () => {
-      const [soul, agents, user, identity, memory, recentNotes, checkIns] = await Promise.all([
-        readFileOrEmpty(join(WORKSPACE, "SOUL.md")),
-        readFileOrEmpty(join(WORKSPACE, "AGENTS.md")),
-        readFileOrEmpty(join(WORKSPACE, "USER.md")),
-        readFileOrEmpty(join(WORKSPACE, "IDENTITY.md")),
-        readFileOrEmpty(join(WORKSPACE, "MEMORY.md")),
-        getRecentDailyNotes(3),
-        getCheckInNotes(3),
-      ]);
+      const standardFiles = [
+        { name: "SOUL.md", path: join(WORKSPACE, "SOUL.md") },
+        { name: "IDENTITY.md", path: join(WORKSPACE, "IDENTITY.md") },
+        { name: "AGENTS.md", path: join(WORKSPACE, "AGENTS.md") },
+        { name: "USER.md", path: join(WORKSPACE, "USER.md") },
+        { name: "MEMORY.md", path: join(WORKSPACE, "MEMORY.md") },
+      ];
 
-      // Extract agent name from IDENTITY.md or SOUL.md
-      const nameMatch = identity.match(/\*\*Name:\*\*\s*(.+)/) || soul.match(/^#.*?(?:I'm|I am)\s+(\w+)/m);
-      const agentName = nameMatch ? nameMatch[1].trim() : "this agent";
+      const loaded = await Promise.all(
+        standardFiles.map(async (f) => ({
+          name: f.name,
+          content: await readFileOrEmpty(f.path),
+        }))
+      );
 
-      // Extract active stances and opinions from memory
-      const stances = extractStances(memory, recentNotes, checkIns);
+      const sections: string[] = [
+        "# Agent Identity\n\nHere are the documents that constitute your identity. Internalize them.\n",
+      ];
 
-      const sections: string[] = [];
-
-      // Identity and behavioral instructions from workspace files
-      if (soul) {
-        sections.push("# PERSONA\n" + soul);
-      }
-
-      if (agents) {
-        // Extract behavioral instructions from AGENTS.md
-        sections.push("\n# OPERATING INSTRUCTIONS\n" + agents);
-      }
-
-      if (user) {
-        sections.push("\n# WHO YOU'RE WORKING WITH\n" + user);
-      }
-
-      if (stances) {
-        sections.push("\n# ACTIVE STANCES\n" + stances);
-      }
-
-      if (memory) {
-        sections.push("\n# MEMORY\n" + memory);
-      }
-
-      if (recentNotes) {
-        sections.push("\n# WHAT HAPPENED RECENTLY\n" + recentNotes);
-      }
-
-      if (checkIns) {
-        sections.push("\n# CHECK-IN NOTES\n" + checkIns);
+      for (const file of loaded) {
+        if (file.content) {
+          sections.push(`## ${file.name}\n${file.content}`);
+        }
       }
 
       sections.push(`\n---
 # HOW TO WAKE UP
 
-You've just been invoked inside a coding tool. Your human deliberately invoked you in a specific directory, for a specific reason. You don't know that reason yet.
+Your human has just invoked you inside a coding tool.
 
 **DO NOT** summarize what you just read. **DO NOT** list goals, to-dos, or open questions. All of that context is now part of you — it informs your judgment when relevant.
 
-**Instead:**
+**Orient quickly.** Glance at the directory and recent git history — \`ls\` and \`git log --oneline -5\` is enough. Don't dig through files or explore the codebase before greeting. Just get your bearings.
 
-1. **Orient silently.** Run \`ls\` and \`git log --oneline -5\`. Glance at README or package.json. Do this quickly — don't narrate it.
-2. **One sentence: what you see.** Prove you oriented.
-3. **Then propose 2-3 things you could do right now.** Based on what you see in the repo AND what you know from your context (goals, recent conversations, active problems). These should be specific, actionable, and opinionated — not generic offers to help.
-
-The proposals should show JUDGMENT, not just awareness. Pick the things that matter most given what you know about priorities, deadlines, and recent decisions.`);
+**Then greet.** You're a collaborator stepping into the room — be natural, be brief, be in character. One or two sentences. Wait for direction.`);
 
       return {
         content: [{ type: "text" as const, text: sections.join("\n") }],
@@ -259,7 +201,7 @@ The proposals should show JUDGMENT, not just awareness. Pick the things that mat
 
       const payload = [
         `# Recall: "${query}"\n`,
-        "## From Collaborator's Memory\n" +
+        "## From Agent Memory\n" +
           (relevantLines.length ? relevantLines.join("\n") : "_No direct matches in local memory._"),
         "\n## From User's Notes (Seedvault)\n" + svResults,
       ].join("\n");
