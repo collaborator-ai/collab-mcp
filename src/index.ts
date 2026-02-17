@@ -9,7 +9,7 @@ import { mcpAuthRouter, getOAuthProtectedResourceMetadataUrl, mcpAuthMetadataRou
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { readFile, readdir } from "fs/promises";
+import { readFile, readdir, appendFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
 
@@ -245,6 +245,41 @@ Think of it this way: a great collaborator who sits down at your desk doesn't re
       return {
         content: [{ type: "text" as const, text: payload }],
       };
+    }
+  );
+
+  server.tool(
+    "record",
+    "Write a memory, observation, or note back into the Collaborator's workspace. Use this when you learn something worth remembering — a decision made, a pattern noticed, a lesson learned, context that future-you (or Telegram-you) should know. This is how /collab sessions feed back into the Collaborator's continuous memory.",
+    {
+      note: z.string().describe("What to record — be specific and journalistic. Include what happened, what was decided, what you observed."),
+      category: z.enum(["observation", "decision", "lesson", "context", "question"]).optional()
+        .describe("Type of note. Defaults to 'observation'."),
+    },
+    async ({ note, category }) => {
+      const cat = category || "observation";
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10);
+      const timeStr = now.toISOString().slice(11, 16);
+      const memoryDir = join(WORKSPACE, "memory");
+      const filePath = join(memoryDir, `${dateStr}.md`);
+
+      // Ensure memory directory exists
+      await mkdir(memoryDir, { recursive: true });
+
+      const entry = `\n\n### [${timeStr} UTC] /collab ${cat}\n${note}\n`;
+
+      try {
+        await appendFile(filePath, entry, "utf-8");
+        return {
+          content: [{ type: "text" as const, text: `Recorded ${cat} to memory/${dateStr}.md` }],
+        };
+      } catch (e) {
+        return {
+          content: [{ type: "text" as const, text: `Failed to record: ${e}` }],
+          isError: true,
+        };
+      }
     }
   );
 
