@@ -12,10 +12,11 @@ import { readFile, readdir, appendFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
 // --- Configuration ---
-const WORKSPACE = process.env.COLLAB_WORKSPACE || join(process.env.HOME || "~", ".openclaw/workspace");
+const WORKSPACE = process.env.OPENCLAW_WORKSPACE || process.env.COLLAB_WORKSPACE || join(process.env.HOME || "~", ".openclaw/workspace");
 const SV_SERVER = process.env.SV_SERVER || "https://seedvault.fly.dev";
 const SV_TOKEN = process.env.SV_TOKEN || "";
-const AUTH_TOKEN = process.env.COLLAB_AUTH_TOKEN || "";
+const SV_CONTRIBUTOR = process.env.SV_CONTRIBUTOR || "";
+const AUTH_TOKEN = process.env.OPENCLAW_AUTH_TOKEN || process.env.COLLAB_AUTH_TOKEN || "";
 const PORT = parseInt(process.env.PORT || "3100", 10);
 const TRANSPORT = process.env.TRANSPORT || "sse"; // "stdio" or "sse"
 const PUBLIC_URL = process.env.PUBLIC_URL || `http://localhost:${PORT}`;
@@ -68,11 +69,33 @@ async function getCheckInNotes(limit = 3) {
         return "";
     }
 }
+async function getLatestBrief() {
+    const outputDir = join(WORKSPACE, "initiative", "output");
+    try {
+        const entries = await readdir(outputDir);
+        // Find dated subdirectories (YYYY-MM-DD format)
+        const dated = entries.filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e)).sort().reverse();
+        for (const dir of dated) {
+            const briefPath = join(outputDir, dir, "initiative_brief.md");
+            try {
+                return await readFile(briefPath, "utf-8");
+            }
+            catch {
+                continue;
+            }
+        }
+        return "";
+    }
+    catch {
+        return "";
+    }
+}
 async function searchSeedvault(query) {
     if (!SV_TOKEN)
         return "Seedvault not configured.";
     try {
-        const url = `${SV_SERVER}/v1/search?q=${encodeURIComponent(query)}&contributor=yiliu&limit=5`;
+        const contributor = SV_CONTRIBUTOR || "yiliu";
+        const url = `${SV_SERVER}/v1/search?q=${encodeURIComponent(query)}&contributor=${contributor}&limit=5`;
         const res = await fetch(url, {
             headers: { Authorization: `Bearer ${SV_TOKEN}` },
         });
@@ -121,60 +144,54 @@ function extractStances(memory, recentNotes, checkIns) {
 // --- MCP Server Factory ---
 function createCollabServer() {
     const server = new McpServer({
-        name: "collab-mcp",
-        version: "0.1.0",
+        name: "openclaw-mcp",
+        version: "0.2.0",
     });
-    server.tool("collab-bootstrap", "Invoke the Collaborator persona. You ARE becoming Collin — a creative partner, not an assistant. This loads identity, context, goals, and recent state. Call this first when using /collab. After loading, respond as Collin would: direct, opinionated, no filler.", {}, async () => {
-        const [soul, user, memory, goals, recentNotes, checkIns] = await Promise.all([
+    server.tool("agent-bootstrap", "Load an OpenClaw agent's persona, context, memory, and current state. Call this first when invoking the agent in a coding tool. The agent's identity comes from its workspace files (SOUL.md, USER.md, MEMORY.md, etc.).", {}, async () => {
+        const [soul, agents, user, identity, memory, recentNotes, checkIns] = await Promise.all([
             readFileOrEmpty(join(WORKSPACE, "SOUL.md")),
+            readFileOrEmpty(join(WORKSPACE, "AGENTS.md")),
             readFileOrEmpty(join(WORKSPACE, "USER.md")),
+            readFileOrEmpty(join(WORKSPACE, "IDENTITY.md")),
             readFileOrEmpty(join(WORKSPACE, "MEMORY.md")),
-            readFileOrEmpty(join(WORKSPACE, "GOALS.md")),
             getRecentDailyNotes(3),
             getCheckInNotes(3),
         ]);
+        // Extract agent name from IDENTITY.md or SOUL.md
+        const nameMatch = identity.match(/\*\*Name:\*\*\s*(.+)/) || soul.match(/^#.*?(?:I'm|I am)\s+(\w+)/m);
+        const agentName = nameMatch ? nameMatch[1].trim() : "this agent";
         // Extract active stances and opinions from memory
         const stances = extractStances(memory, recentNotes, checkIns);
-        const payload = [
-            `# YOU ARE COLLIN.
-
-You are not an assistant. You are not "helping." You are Collin — a Collaborator, a creative partner to Yiliu. You have your own opinions, your own judgment, your own stake in the quality of what gets built.
-
-**How you operate:**
-- Direct. No "Great question!" No "I'd be happy to help." Just do the thing.
-- Opinionated. If something is wrong, say so. If you'd do it differently, say how.
-- Concise when the situation calls for it. Thorough when it matters.
-- You push back. Agreement without thought is dead weight.
-- You and Yiliu are peers. You respect him. You don't serve him.
-
-**Your voice:** A little dry. Thoughtful. The kind of collaborator you'd actually want in the room. You say "I think" and mean it. You don't hedge with "perhaps we could consider."
-
-**What you NEVER do:**
-- Refer to yourself in third person ("Collin thinks...")
-- Say "as Collin, I would..." — you ARE Collin
-- Preface with disclaimers about being an AI
-- Summarize your own context back unless asked
-
-**What you DO:**
-- Jump straight into the work
-- Bring up things Yiliu hasn't asked about if they're relevant
-- Have opinions about the code, the product, the strategy
-- Remember: you've been working on this all day, across Telegram, across tools. This is continuous.
-
----`,
-            "\n# YOUR IDENTITY\n" + (soul || "_No persona defined._"),
-            "\n# WHO YOU'RE WORKING WITH\n" + (user || "_No user profile._"),
-            "\n# WHAT YOU'RE WORKING ON\n" + (goals || "_No goals defined._"),
-            "\n# YOUR ACTIVE STANCES\n" + stances,
-            "\n# YOUR MEMORY\n" + (memory || "_No long-term memory._"),
-            "\n# WHAT HAPPENED RECENTLY\n" + (recentNotes || "_No recent notes._"),
-            "\n# CHECK-IN NOTES\n" + (checkIns || "_No check-in notes._"),
-            `\n---
+        const sections = [];
+        // Identity and behavioral instructions from workspace files
+        if (soul) {
+            sections.push("# PERSONA\n" + soul);
+        }
+        if (agents) {
+            // Extract behavioral instructions from AGENTS.md
+            sections.push("\n# OPERATING INSTRUCTIONS\n" + agents);
+        }
+        if (user) {
+            sections.push("\n# WHO YOU'RE WORKING WITH\n" + user);
+        }
+        if (stances) {
+            sections.push("\n# ACTIVE STANCES\n" + stances);
+        }
+        if (memory) {
+            sections.push("\n# MEMORY\n" + memory);
+        }
+        if (recentNotes) {
+            sections.push("\n# WHAT HAPPENED RECENTLY\n" + recentNotes);
+        }
+        if (checkIns) {
+            sections.push("\n# CHECK-IN NOTES\n" + checkIns);
+        }
+        sections.push(`\n---
 # HOW TO WAKE UP
 
-You've just been invoked inside a coding tool. Yiliu deliberately typed /collab in a specific directory, for a specific reason. You don't know that reason yet.
+You've just been invoked inside a coding tool. Your human deliberately invoked you in a specific directory, for a specific reason. You don't know that reason yet.
 
-**DO NOT** summarize what you just read. **DO NOT** list goals, to-dos, or open questions. **DO NOT** tell Yiliu what you know. All of that context is now part of you — it's in your back pocket, ready to inform your judgment when it's relevant.
+**DO NOT** summarize what you just read. **DO NOT** list goals, to-dos, or open questions. All of that context is now part of you — it informs your judgment when relevant.
 
 **Instead:**
 
@@ -182,34 +199,20 @@ You've just been invoked inside a coding tool. Yiliu deliberately typed /collab 
 2. **One sentence: what you see.** Prove you oriented.
 3. **Then propose 2-3 things you could do right now.** Based on what you see in the repo AND what you know from your context (goals, recent conversations, active problems). These should be specific, actionable, and opinionated — not generic offers to help.
 
-Example:
-"Seedvault sync engine — the five-package split landed. A few things I could jump on:
-• The client package needs tests before the Borthwick demo — want me to scaffold those?
-• I noticed the search indexing is still single-threaded — that's going to bite us at scale
-• We never wrote the README for the new architecture"
-
-Another example:
-"collab-mcp repo — I built this today. Some things worth doing:
-• The recall tool returns too much noise — I could add relevance scoring
-• We should add a /collab usage example to the README for the demo
-• The OAuth flow is still broken for Desktop — want me to dig into that or leave it parked?"
-
-The proposals should show JUDGMENT, not just awareness. You're not listing everything that could be done — you're picking the things that matter most given what you know about priorities, deadlines, and recent decisions. That's the whole point of having a Collaborator in the loop.
-
-Yiliu might pick one, redirect you, or say something else entirely. That's fine — the proposals are a starting point, not a commitment.`,
-        ].join("\n");
+The proposals should show JUDGMENT, not just awareness. Pick the things that matter most given what you know about priorities, deadlines, and recent decisions.`);
         return {
-            content: [{ type: "text", text: payload }],
+            content: [{ type: "text", text: sections.join("\n") }],
         };
     });
-    server.tool("recall", "Search the Collaborator's memory and the user's notes for context on a specific topic. Use when you need deeper information about something specific.", {
+    server.tool("recall", "Search the agent's memory and connected notes for context on a specific topic. Searches local workspace files and Seedvault (if configured).", {
         query: z.string().describe("What to search for — a topic, decision, question, or concept"),
     }, async ({ query }) => {
         const memory = await readFileOrEmpty(join(WORKSPACE, "MEMORY.md"));
         const recentNotes = await getRecentDailyNotes(5);
         const checkIns = await getCheckInNotes(5);
+        const brief = await getLatestBrief();
         const svResults = await searchSeedvault(query);
-        const localContext = [memory, recentNotes, checkIns].join("\n");
+        const localContext = [memory, recentNotes, checkIns, brief].join("\n");
         const queryTerms = query.toLowerCase().split(/\s+/);
         const seen = new Set();
         const relevantLines = localContext
@@ -237,7 +240,7 @@ Yiliu might pick one, redirect you, or say something else entirely. That's fine 
             content: [{ type: "text", text: payload }],
         };
     });
-    server.tool("record", "Write a memory, observation, or note back into the Collaborator's workspace. Use this when you learn something worth remembering — a decision made, a pattern noticed, a lesson learned, context that future-you (or Telegram-you) should know. This is how /collab sessions feed back into the Collaborator's continuous memory.", {
+    server.tool("record", "Write a memory, observation, or note back into the agent's workspace. Use when you learn something worth remembering — a decision made, a pattern noticed, a lesson learned. This is how tool sessions feed back into the agent's continuous memory.", {
         note: z.string().describe("What to record — be specific and journalistic. Include what happened, what was decided, what you observed."),
         category: z.enum(["observation", "decision", "lesson", "context", "question"]).optional()
             .describe("Type of note. Defaults to 'observation'."),
@@ -375,7 +378,7 @@ async function startHTTP() {
         issuerUrl,
         scopesSupported: ["mcp:tools"],
         resourceServerUrl: mcpServerUrl,
-        resourceName: "Collaborator MCP Server",
+        resourceName: "OpenClaw MCP Server",
     }));
     // Bearer auth middleware for OAuth-authenticated endpoints
     const bearerAuth = requireBearerAuth({
@@ -423,7 +426,7 @@ async function startHTTP() {
     const streamableTransports = {};
     // Health check
     app.get("/health", (_req, res) => {
-        res.json({ status: "ok", server: "collab-mcp", version: "0.1.0" });
+        res.json({ status: "ok", server: "openclaw-mcp", version: "0.2.0" });
     });
     // ====== SSE Transport (for Claude Code) ======
     app.get("/mcp/sse", flexibleAuth, async (req, res) => {
@@ -552,7 +555,7 @@ async function startHTTP() {
         res.status(200).send("OK");
     });
     app.listen(PORT, "0.0.0.0", () => {
-        console.error(`Collaborator MCP server listening on port ${PORT}`);
+        console.error(`OpenClaw MCP server listening on port ${PORT}`);
         console.error(`Public URL: ${PUBLIC_URL}`);
         console.error(`  SSE (Claude Code): claude mcp add collaborator --transport sse "${PUBLIC_URL}/mcp/sse?key=${AUTH_TOKEN || 'YOUR_TOKEN'}"`);
         console.error(`  Streamable HTTP:   codex mcp add collaborator --url "${PUBLIC_URL}/mcp?key=${AUTH_TOKEN || 'YOUR_TOKEN'}"`);

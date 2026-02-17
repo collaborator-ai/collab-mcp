@@ -159,13 +159,12 @@ function createCollabServer(): McpServer {
     "Load an OpenClaw agent's persona, context, memory, and current state. Call this first when invoking the agent in a coding tool. The agent's identity comes from its workspace files (SOUL.md, USER.md, MEMORY.md, etc.).",
     {},
     async () => {
-      const [soul, agents, user, identity, memory, brief, recentNotes, checkIns] = await Promise.all([
+      const [soul, agents, user, identity, memory, recentNotes, checkIns] = await Promise.all([
         readFileOrEmpty(join(WORKSPACE, "SOUL.md")),
         readFileOrEmpty(join(WORKSPACE, "AGENTS.md")),
         readFileOrEmpty(join(WORKSPACE, "USER.md")),
         readFileOrEmpty(join(WORKSPACE, "IDENTITY.md")),
         readFileOrEmpty(join(WORKSPACE, "MEMORY.md")),
-        getLatestBrief(),
         getRecentDailyNotes(3),
         getCheckInNotes(3),
       ]);
@@ -191,10 +190,6 @@ function createCollabServer(): McpServer {
 
       if (user) {
         sections.push("\n# WHO YOU'RE WORKING WITH\n" + user);
-      }
-
-      if (brief) {
-        sections.push("\n# CURRENT STATE — INITIATIVE BRIEF\n" + brief);
       }
 
       if (stances) {
