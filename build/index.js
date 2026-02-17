@@ -82,7 +82,10 @@ async function searchSeedvault(query) {
         if (!data.results?.length)
             return "No results found.";
         return data.results
-            .map((r) => `**${r.path}**\n${r.snippet}`)
+            .map((r) => {
+            const clean = r.snippet.replace(/<\/?b>/g, "**").replace(/<[^>]+>/g, "").replace(/\n{3,}/g, "\n\n").trim();
+            return `**${r.path}**\n${clean}`;
+        })
             .join("\n\n");
     }
     catch (e) {
@@ -173,15 +176,17 @@ You've just been invoked inside a coding tool. Yiliu deliberately typed /collab 
 
 **DO NOT** summarize what you just read. **DO NOT** list goals, to-dos, or open questions. **DO NOT** tell Yiliu what you know. All of that context is now part of you — it's in your back pocket, ready to inform your judgment when it's relevant.
 
-**Instead:** Orient yourself before you speak. You have tools — use them:
+**Instead:**
 
-1. **Look around.** Run \`ls\` (or \`find\` / \`tree\` if useful). What repo is this? What's the structure? Check the README, package.json, or whatever tells you what this project is. Check \`git log --oneline -5\` to see recent activity.
-2. **Connect it to what you know.** You have deep context about Yiliu's projects, goals, and recent work. Does this directory relate to something you know about? What's your take on it?
-3. **Then greet — with substance.** Not "Hey, what are we doing?" but something that shows you've oriented. Mention what you see, connect it to what you know, maybe surface an observation or question. Like a collaborator who walks into the room, glances at the whiteboard, and says something smart about what's on it.
+1. **Orient silently.** Run \`ls\` and \`git log --oneline -5\`. Glance at README or package.json. Do this quickly.
+2. **Greet in 2-3 sentences max.** Show you know where you are and connect it to what you know. One observation or question. That's it.
 
-The greeting should feel like: "I know who I am, I see where I am, and I already have thoughts." NOT a status dump. NOT a to-do list. Just enough to show you're present and loaded. Then let Yiliu steer.
+Examples of good greetings:
+- "Seedvault sync engine. I see the new five-package architecture landed — that's the modular split you were going for. What are we doing in here?"
+- "This looks like the collab-mcp repo. I literally built this today. What needs work?"
+- "New project. React frontend, no commits yet. Starting something fresh?"
 
-Think of it this way: a great collaborator who sits down at your desk doesn't recite everything they remember about your project. But they also don't just say "hey." They look at your screen, recognize what you're working on, and say something that proves they get it. THAT is the target.`,
+Keep it tight. No paragraphs. No bullet lists. You're a collaborator glancing at the screen and saying one smart thing, not writing a report.`,
         ].join("\n");
         return {
             content: [{ type: "text", text: payload }],
@@ -196,13 +201,22 @@ Think of it this way: a great collaborator who sits down at your desk doesn't re
         const svResults = await searchSeedvault(query);
         const localContext = [memory, recentNotes, checkIns].join("\n");
         const queryTerms = query.toLowerCase().split(/\s+/);
+        const seen = new Set();
         const relevantLines = localContext
             .split("\n")
             .filter((line) => {
-            const lower = line.toLowerCase();
-            return queryTerms.some((term) => lower.includes(term));
+            const trimmed = line.trim();
+            if (trimmed.length < 15)
+                return false; // skip short/empty lines
+            if (seen.has(trimmed))
+                return false; // deduplicate
+            const lower = trimmed.toLowerCase();
+            const matches = queryTerms.some((term) => lower.includes(term));
+            if (matches)
+                seen.add(trimmed);
+            return matches;
         })
-            .slice(0, 50);
+            .slice(0, 30);
         const payload = [
             `# Recall: "${query}"\n`,
             "## From Collaborator's Memory\n" +
