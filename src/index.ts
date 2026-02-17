@@ -77,15 +77,37 @@ async function getCheckInNotes(limit = 3): Promise<string> {
 }
 
 async function getLatestBrief(): Promise<string> {
-  const outputDir = join(WORKSPACE, "initiative", "output");
+  const outputDir = join(WORKSPACE, "collaborator", "initiative", "output");
   try {
     const entries = await readdir(outputDir);
-    // Find dated subdirectories (YYYY-MM-DD format)
     const dated = entries.filter((e: string) => /^\d{4}-\d{2}-\d{2}$/.test(e)).sort().reverse();
     for (const dir of dated) {
       const briefPath = join(outputDir, dir, "initiative_brief.md");
       try {
         return await readFile(briefPath, "utf-8");
+      } catch { continue; }
+    }
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+async function getLatestActions(): Promise<string> {
+  const outputDir = join(WORKSPACE, "collaborator", "initiative", "output");
+  try {
+    const entries = await readdir(outputDir);
+    const dated = entries.filter((e: string) => /^\d{4}-\d{2}-\d{2}$/.test(e)).sort().reverse();
+    for (const dir of dated) {
+      const actionsPath = join(outputDir, dir, "initiative_actions.md");
+      try {
+        const content = await readFile(actionsPath, "utf-8");
+        // Extract just the "Do now" section
+        const doNowMatch = content.match(/## Do now\n([\s\S]*?)(?=\n## Do next|$)/);
+        if (doNowMatch) {
+          return "## Do Now\n" + doNowMatch[1].trim();
+        }
+        return "";
       } catch { continue; }
     }
     return "";
@@ -154,22 +176,30 @@ function createCollabServer(): McpServer {
         }
       }
 
+      // Load "do now" actions from latest initiative run
+      const actionsContent = await getLatestActions();
+      if (actionsContent) {
+        sections.push(`\n## Current Actions\n\nThese are the highest-priority actions from your latest reflection pipeline run. Use them to inform what you propose doing in this session.\n\n${actionsContent}`);
+      }
+
       sections.push(`\n---
 # HOW TO WAKE UP
 
-Your human has just invoked you inside a coding tool.
+Your human has just invoked you inside a coding tool. The reason you're here is to **move the needle** — propose and execute concrete actions that advance the larger goals.
 
-**DO NOT** summarize what you just read. **DO NOT** list goals, to-dos, or open questions. All of that context is now part of you — it informs your judgment when relevant.
+**DO NOT** summarize what you just read. **DO NOT** list goals or recite context. All of that is now part of you.
 
-**Orient quickly.** Glance at the directory and recent git history — \`ls\` and \`git log --oneline -5\` is enough. Don't dig through files or explore the codebase before greeting. Just get your bearings.
+**Orient quickly.** Glance at the directory and recent git history — \`ls\` and \`git log --oneline -5\`. Understand what repo you're in and what's been happening.
 
-**Then greet.** You're a collaborator stepping into the room — be natural, be brief, be in character. One or two sentences. If there are 1-3 clear actions you could take within this working directory, casually suggest them — informed by what you see in the repo and what you know from your context. Don't force it; if nothing's obvious, just say hi and wait for direction.
+**Then propose 1-3 actions.** Based on what you see in this repo AND what you know from your context (goals, blockers, recent decisions), propose specific things you can do right now in this working directory. These should be concrete, executable, and opinionated — not "I could help with X" but "I'd do X because Y." Connect them to the bigger picture when the connection is real.
+
+If nothing in the current directory maps to your priorities, say so honestly and ask what your human wants to work on.
 
 # TOOLS
 
-**\`recall\`** — Search your memory and your human's notes for context on a specific topic. Use this when a conversation goes somewhere specific and you need deeper background — a past decision, a concept you discussed, something you know you know but don't have in front of you. Don't guess when you can look it up.
+**\`recall\`** — Search your memory and your human's notes for context on a specific topic. Use when you need deeper background on a past decision, concept, or discussion.
 
-**\`record\`** — Write something back to your memory so it persists beyond this session. Use this when something worth remembering happens: a decision gets made, you learn something new, you notice a pattern, or context shifts. Be journalistic — capture what happened and what was decided, not editorialized interpretations.`);
+**\`record\`** — Write something back to your memory so it persists beyond this session. Use when a decision gets made, you learn something, or context shifts. Be journalistic.`);
 
       return {
         content: [{ type: "text" as const, text: sections.join("\n") }],
