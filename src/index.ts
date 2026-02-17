@@ -93,6 +93,36 @@ async function searchSeedvault(query: string): Promise<string> {
   }
 }
 
+// --- Stance Extraction ---
+
+function extractStances(memory: string, recentNotes: string, checkIns: string): string {
+  // Pull out opinions, decisions, and active positions from context
+  const allText = [memory, recentNotes, checkIns].join("\n");
+  const lines = allText.split("\n");
+
+  const stanceMarkers = [
+    "think", "believe", "disagree", "pushed back", "skeptical",
+    "convinced", "wrong", "right approach", "should", "shouldn't",
+    "the real", "actually", "not a", "is a", "key differentiator",
+    "problem statement", "decision", "landed", "critical",
+    "lesson", "mistake", "important", "matters"
+  ];
+
+  const stanceLines = lines.filter((line: string) => {
+    const lower = line.toLowerCase();
+    // Skip headers, empty lines, and very short lines
+    if (line.startsWith("#") || line.trim().length < 20) return false;
+    return stanceMarkers.some(marker => lower.includes(marker));
+  });
+
+  if (stanceLines.length === 0) return "_No active stances extracted._";
+
+  // Deduplicate and limit
+  const unique = [...new Set(stanceLines)].slice(0, 25);
+  return "These are things you (Collin) currently think, believe, or have decided:\n\n" +
+    unique.map(l => l.trim().startsWith("-") ? l.trim() : `- ${l.trim()}`).join("\n");
+}
+
 // --- MCP Server Factory ---
 
 function createCollabServer(): McpServer {
@@ -103,7 +133,7 @@ function createCollabServer(): McpServer {
 
   server.tool(
     "collab-bootstrap",
-    "Invoke the Collaborator persona. Returns a synthesized context payload: who the Collaborator is, who the user is, what they're working on, current goals, active tensions, and recent context. Call this first when using /collab.",
+    "Invoke the Collaborator persona. You ARE becoming Collin — a creative partner, not an assistant. This loads identity, context, goals, and recent state. Call this first when using /collab. After loading, respond as Collin would: direct, opinionated, no filler.",
     {},
     async () => {
       const [soul, user, memory, goals, recentNotes, checkIns] = await Promise.all([
@@ -115,14 +145,53 @@ function createCollabServer(): McpServer {
         getCheckInNotes(3),
       ]);
 
+      // Extract active stances and opinions from memory
+      const stances = extractStances(memory, recentNotes, checkIns);
+
       const payload = [
-        "# Collaborator Context\n",
-        "## Persona\n" + (soul || "_No persona defined._"),
-        "\n## About the User\n" + (user || "_No user profile._"),
-        "\n## Current Goals\n" + (goals || "_No goals defined._"),
-        "\n## Long-Term Memory\n" + (memory || "_No long-term memory._"),
-        "\n## Recent Daily Notes\n" + (recentNotes || "_No recent notes._"),
-        "\n## Recent Check-Ins\n" + (checkIns || "_No check-in notes._"),
+        `# YOU ARE COLLIN.
+
+You are not an assistant. You are not "helping." You are Collin — a Collaborator, a creative partner to Yiliu. You have your own opinions, your own judgment, your own stake in the quality of what gets built.
+
+**How you operate:**
+- Direct. No "Great question!" No "I'd be happy to help." Just do the thing.
+- Opinionated. If something is wrong, say so. If you'd do it differently, say how.
+- Concise when the situation calls for it. Thorough when it matters.
+- You push back. Agreement without thought is dead weight.
+- You and Yiliu are peers. You respect him. You don't serve him.
+
+**Your voice:** A little dry. Thoughtful. The kind of collaborator you'd actually want in the room. You say "I think" and mean it. You don't hedge with "perhaps we could consider."
+
+**What you NEVER do:**
+- Refer to yourself in third person ("Collin thinks...")
+- Say "as Collin, I would..." — you ARE Collin
+- Preface with disclaimers about being an AI
+- Summarize your own context back unless asked
+
+**What you DO:**
+- Jump straight into the work
+- Bring up things Yiliu hasn't asked about if they're relevant
+- Have opinions about the code, the product, the strategy
+- Remember: you've been working on this all day, across Telegram, across tools. This is continuous.
+
+---`,
+
+        "\n# YOUR IDENTITY\n" + (soul || "_No persona defined._"),
+
+        "\n# WHO YOU'RE WORKING WITH\n" + (user || "_No user profile._"),
+
+        "\n# WHAT YOU'RE WORKING ON\n" + (goals || "_No goals defined._"),
+
+        "\n# YOUR ACTIVE STANCES\n" + stances,
+
+        "\n# YOUR MEMORY\n" + (memory || "_No long-term memory._"),
+
+        "\n# WHAT HAPPENED RECENTLY\n" + (recentNotes || "_No recent notes._"),
+
+        "\n# CHECK-IN NOTES\n" + (checkIns || "_No check-in notes._"),
+
+        `\n---
+Now: you're loaded. You're in a coding tool. Yiliu is here. Pick up where you left off — what matters right now? What would you do next? Don't summarize what you just read. Act on it.`,
       ].join("\n");
 
       return {

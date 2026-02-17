@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collaborator Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0a0a0f;
+    color: #e0e0e8;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 40px;
+  }
+
+  .diagram {
+    width: 1200px;
+    position: relative;
+  }
+
+  .title {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+
+  .title h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+
+  .title p {
+    font-size: 15px;
+    color: #888;
+    font-weight: 400;
+  }
+
+  .architecture {
+    display: grid;
+    grid-template-columns: 240px 1fr 240px;
+    gap: 32px;
+    align-items: start;
+  }
+
+  /* Column headers */
+  .col-header {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #666;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  /* Input streams */
+  .inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 60px;
+  }
+
+  .input-item {
+    background: #13131a;
+    border: 1px solid #2a2a35;
+    border-radius: 10px;
+    padding: 14px 16px;
+    position: relative;
+  }
+
+  .input-item .label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #c8c8d4;
+  }
+
+  .input-item .sublabel {
+    font-size: 11px;
+    color: #666;
+    margin-top: 2px;
+  }
+
+  .input-item .vault-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 6px;
+  }
+
+  .vault-seedvault { background: #1a2a1a; color: #4ade80; border: 1px solid #2a4a2a; }
+  .vault-msgvault { background: #1a1a2a; color: #818cf8; border: 1px solid #2a2a4a; }
+  .vault-unknown { background: #2a1a1a; color: #f87171; border: 1px solid #4a2a2a; }
+  .vault-direct { background: #2a2a1a; color: #fbbf24; border: 1px solid #4a4a2a; }
+
+  /* Core */
+  .core-wrapper {
+    position: relative;
+  }
+
+  .core {
+    background: linear-gradient(135deg, #14141f 0%, #1a1a28 100%);
+    border: 1.5px solid #333345;
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+  }
+
+  .core-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .core-item {
+    background: #0d0d14;
+    border: 1px solid #2a2a38;
+    border-radius: 10px;
+    padding: 18px;
+    text-align: center;
+    position: relative;
+  }
+
+  .core-item.persona {
+    border-color: #4a3a6a;
+  }
+
+  .core-item.ontology {
+    border-color: #3a5a4a;
+  }
+
+  .core-item.agent {
+    border-color: #4a4a3a;
+  }
+
+  .core-item.mcp {
+    border-color: #3a4a5a;
+  }
+
+  .core-item .icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+
+  .core-item .name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e0e0ec;
+  }
+
+  .core-item .desc {
+    font-size: 11px;
+    color: #777;
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
+  .core-item .tag {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-top: 8px;
+  }
+
+  .tag-persona { background: #2a1a3a; color: #a78bfa; }
+  .tag-ontology { background: #1a2a1a; color: #4ade80; }
+  .tag-agent { background: #2a2a1a; color: #fbbf24; }
+  .tag-mcp { background: #1a2a3a; color: #60a5fa; }
+
+  /* Loop indicator on ontology */
+  .loop-indicator {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 14px;
+    opacity: 0.6;
+  }
+
+  /* Connectors inside core */
+  .core-connectors {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  /* Output surfaces */
+  .outputs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 60px;
+  }
+
+  .output-item {
+    background: #13131a;
+    border: 1px solid #2a2a35;
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+
+  .output-item .label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #c8c8d4;
+  }
+
+  .output-item .sublabel {
+    font-size: 11px;
+    color: #666;
+    margin-top: 2px;
+  }
+
+  .output-item .surface-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 6px;
+  }
+
+  .surface-app { background: #1a2a2a; color: #22d3ee; border: 1px solid #2a4a4a; }
+  .surface-msg { background: #2a1a2a; color: #e879f9; border: 1px solid #4a2a4a; }
+  .surface-skill { background: #1a2a3a; color: #60a5fa; border: 1px solid #2a3a5a; }
+
+  /* Flow arrows - SVG overlay */
+  .arrows-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Tagline */
+  .tagline {
+    text-align: center;
+    margin-top: 40px;
+    font-size: 13px;
+    color: #555;
+    font-style: italic;
+  }
+
+  .tagline span {
+    color: #888;
+    font-weight: 500;
+  }
+
+  /* Arrow labels between columns */
+  .flow-label {
+    position: absolute;
+    font-size: 10px;
+    font-weight: 500;
+    color: #555;
+    letter-spacing: 0.5px;
+  }
+
+  .flow-left {
+    left: 253px;
+    top: 50%;
+    transform: translateY(-50%);
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+  }
+
+  .flow-right {
+    right: 253px;
+    top: 50%;
+    transform: translateY(-50%);
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+  }
+
+  /* Horizontal flow arrows */
+  .flow-arrows {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .arrow-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding-top: 60px;
+  }
+
+  .arrow-line {
+    width: 40px;
+    height: 2px;
+    background: linear-gradient(90deg, #333 0%, #555 50%, #333 100%);
+    position: relative;
+  }
+
+  .arrow-line::after {
+    content: '›';
+    position: absolute;
+    right: -6px;
+    top: -9px;
+    font-size: 16px;
+    color: #555;
+  }
+
+  .arrow-line.reverse::after {
+    content: '‹';
+    left: -6px;
+    right: auto;
+  }
+
+  /* Refined grid with arrows */
+  .architecture-full {
+    display: grid;
+    grid-template-columns: 220px 24px 1fr 24px 220px;
+    gap: 12px;
+    align-items: stretch;
+    position: relative;
+  }
+
+  .arrow-strip {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding-top: 40px;
+    gap: 24px;
+  }
+
+  .arrow-strip .arr {
+    color: #444;
+    font-size: 18px;
+    line-height: 1;
+  }
+</style>
+</head>
+<body>
+
+<div class="diagram">
+  <div class="title">
+    <h1>Collaborator</h1>
+    <p>Persistent AI partner — accumulated context exposed across every tool</p>
+  </div>
+
+  <div class="architecture-full">
+
+    <!-- INPUT STREAMS -->
+    <div>
+      <div class="col-header">Input Streams</div>
+      <div class="inputs" style="padding-top: 0;">
+        <div class="input-item">
+          <div class="label">📝 Local Notes</div>
+          <div class="sublabel">Obsidian, markdown files</div>
+          <div class="vault-badge vault-seedvault">Seedvault</div>
+        </div>
+        <div class="input-item">
+          <div class="label">📧 Email & Messages</div>
+          <div class="sublabel">Gmail, Slack, iMessage</div>
+          <div class="vault-badge vault-msgvault">MsgVault</div>
+        </div>
+        <div class="input-item">
+          <div class="label">🤖 AI Transcripts</div>
+          <div class="sublabel">Claude Code, ChatGPT, etc.</div>
+          <div class="vault-badge vault-unknown">? (unsolved)</div>
+        </div>
+        <div class="input-item">
+          <div class="label">🌐 Internet</div>
+          <div class="sublabel">Research, web, APIs</div>
+          <div class="vault-badge vault-direct">Direct</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEFT ARROWS -->
+    <div class="arrow-strip">
+      <div class="arr">→</div>
+      <div class="arr">→</div>
+      <div class="arr">→</div>
+      <div class="arr">→</div>
+    </div>
+
+    <!-- CORE -->
+    <div class="core-wrapper">
+      <div class="col-header">Collaborator Core</div>
+      <div class="core">
+        <div class="core-grid">
+          <div class="core-item persona">
+            <div class="icon">🎭</div>
+            <div class="name">Persona</div>
+            <div class="desc">Identity, stance, voice, relationship style</div>
+            <div class="tag tag-persona">Who it is</div>
+          </div>
+          <div class="core-item ontology">
+            <div class="loop-indicator">🔄</div>
+            <div class="icon">🧠</div>
+            <div class="name">Ontology</div>
+            <div class="desc">Concepts, tensions, model of your work. Self-healing gaps.</div>
+            <div class="tag tag-ontology">What it knows</div>
+          </div>
+          <div class="core-item agent">
+            <div class="icon">⚡</div>
+            <div class="name">Agent</div>
+            <div class="desc">Persistent runtime on OpenClaw. Drives conversations & actions.</div>
+            <div class="tag tag-agent">What it does</div>
+          </div>
+          <div class="core-item mcp">
+            <div class="icon">🔌</div>
+            <div class="name">MCP Server</div>
+            <div class="desc">Exposes context & judgment to external tools via /collab</div>
+            <div class="tag tag-mcp">How it connects</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT ARROWS -->
+    <div class="arrow-strip">
+      <div class="arr">→</div>
+      <div class="arr">→</div>
+      <div class="arr">→</div>
+    </div>
+
+    <!-- OUTPUT SURFACES -->
+    <div>
+      <div class="col-header">Surfaces</div>
+      <div class="outputs" style="padding-top: 0;">
+        <div class="output-item">
+          <div class="label">🖥️ Collaborator App</div>
+          <div class="sublabel">Desktop, mobile, web</div>
+          <div class="surface-badge surface-app">Dedicated UI</div>
+        </div>
+        <div class="output-item">
+          <div class="label">💬 Messaging</div>
+          <div class="sublabel">Telegram, Discord, Slack</div>
+          <div class="surface-badge surface-msg">Chat</div>
+        </div>
+        <div class="output-item">
+          <div class="label">⌨️ /collab</div>
+          <div class="sublabel">Claude Code, Codex, Cursor</div>
+          <div class="surface-badge surface-skill">MCP Skill</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="tagline">
+    <span>collaborator.bot</span> — Thinks for itself. Creates with you.
+  </div>
+</div>
+
+</body>
+</html>

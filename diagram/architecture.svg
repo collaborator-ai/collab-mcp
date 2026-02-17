@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
+    </style>
+    <!-- Rounded rect clip paths -->
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="700" fill="#0a0a0f" rx="0"/>
+
+  <!-- Title -->
+  <text x="600" y="48" text-anchor="middle" fill="#ffffff" font-size="28" font-weight="700" letter-spacing="-0.5">Collaborator</text>
+  <text x="600" y="72" text-anchor="middle" fill="#888888" font-size="13" font-weight="400">Persistent AI partner — accumulated context exposed across every tool</text>
+
+  <!-- Column Headers -->
+  <text x="150" y="112" text-anchor="middle" fill="#555" font-size="10" font-weight="600" letter-spacing="1.5" text-transform="uppercase">INPUT STREAMS</text>
+  <text x="600" y="112" text-anchor="middle" fill="#555" font-size="10" font-weight="600" letter-spacing="1.5">COLLABORATOR CORE</text>
+  <text x="1050" y="112" text-anchor="middle" fill="#555" font-size="10" font-weight="600" letter-spacing="1.5">SURFACES</text>
+
+  <!-- ==================== INPUT STREAMS (left) ==================== -->
+
+  <!-- Local Notes -->
+  <rect x="30" y="132" width="240" height="80" rx="10" fill="#13131a" stroke="#2a2a35" stroke-width="1"/>
+  <text x="56" y="158" fill="#c8c8d4" font-size="14" font-weight="600">📝  Local Notes</text>
+  <text x="56" y="175" fill="#666" font-size="11">Obsidian, markdown files</text>
+  <rect x="56" y="184" width="72" height="18" rx="4" fill="#1a2a1a" stroke="#2a4a2a" stroke-width="1"/>
+  <text x="92" y="197" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="600">Seedvault</text>
+
+  <!-- Email & Messages -->
+  <rect x="30" y="226" width="240" height="80" rx="10" fill="#13131a" stroke="#2a2a35" stroke-width="1"/>
+  <text x="56" y="252" fill="#c8c8d4" font-size="14" font-weight="600">📧  Email &amp; Messages</text>
+  <text x="56" y="269" fill="#666" font-size="11">Gmail, Slack, iMessage</text>
+  <rect x="56" y="278" width="68" height="18" rx="4" fill="#1a1a2a" stroke="#2a2a4a" stroke-width="1"/>
+  <text x="90" y="291" text-anchor="middle" fill="#818cf8" font-size="10" font-weight="600">MsgVault</text>
+
+  <!-- AI Transcripts -->
+  <rect x="30" y="320" width="240" height="80" rx="10" fill="#13131a" stroke="#2a2a35" stroke-width="1"/>
+  <text x="56" y="346" fill="#c8c8d4" font-size="14" font-weight="600">🤖  AI Transcripts</text>
+  <text x="56" y="363" fill="#666" font-size="11">Claude Code, ChatGPT, etc.</text>
+  <rect x="56" y="372" width="80" height="18" rx="4" fill="#2a1a1a" stroke="#4a2a2a" stroke-width="1"/>
+  <text x="96" y="385" text-anchor="middle" fill="#f87171" font-size="10" font-weight="600">? unsolved</text>
+
+  <!-- Internet -->
+  <rect x="30" y="414" width="240" height="80" rx="10" fill="#13131a" stroke="#2a2a35" stroke-width="1"/>
+  <text x="56" y="440" fill="#c8c8d4" font-size="14" font-weight="600">🌐  Internet</text>
+  <text x="56" y="457" fill="#666" font-size="11">Research, web, APIs</text>
+  <rect x="56" y="466" width="52" height="18" rx="4" fill="#2a2a1a" stroke="#4a4a2a" stroke-width="1"/>
+  <text x="82" y="479" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="600">Direct</text>
+
+  <!-- ==================== FLOW ARROWS (left) ==================== -->
+  <line x1="280" y1="172" x2="350" y2="220" stroke="#333" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="280" y1="266" x2="350" y2="280" stroke="#333" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="280" y1="360" x2="350" y2="340" stroke="#333" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="280" y1="454" x2="350" y2="400" stroke="#333" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- ==================== CORE (center) ==================== -->
+  <rect x="360" y="130" width="480" height="400" rx="16" fill="#14141f" stroke="#333345" stroke-width="1.5"/>
+
+  <!-- Persona -->
+  <rect x="384" y="154" width="212" height="170" rx="10" fill="#0d0d14" stroke="#4a3a6a" stroke-width="1"/>
+  <text x="490" y="190" text-anchor="middle" font-size="24">🎭</text>
+  <text x="490" y="215" text-anchor="middle" fill="#e0e0ec" font-size="14" font-weight="600">Persona</text>
+  <text x="490" y="236" text-anchor="middle" fill="#777" font-size="11">Identity, stance, voice,</text>
+  <text x="490" y="251" text-anchor="middle" fill="#777" font-size="11">relationship style</text>
+  <rect x="455" y="262" width="70" height="18" rx="3" fill="#2a1a3a"/>
+  <text x="490" y="275" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="600">WHO IT IS</text>
+
+  <!-- Ontology -->
+  <rect x="604" y="154" width="212" height="170" rx="10" fill="#0d0d14" stroke="#3a5a4a" stroke-width="1"/>
+  <text x="790" y="170" fill="#666" font-size="12">🔄</text>
+  <text x="710" y="190" text-anchor="middle" font-size="24">🧠</text>
+  <text x="710" y="215" text-anchor="middle" fill="#e0e0ec" font-size="14" font-weight="600">Ontology</text>
+  <text x="710" y="236" text-anchor="middle" fill="#777" font-size="11">Concepts, tensions, model</text>
+  <text x="710" y="251" text-anchor="middle" fill="#777" font-size="11">of your work. Self-healing.</text>
+  <rect x="667" y="262" width="86" height="18" rx="3" fill="#1a2a1a"/>
+  <text x="710" y="275" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="600">WHAT IT KNOWS</text>
+
+  <!-- Agent -->
+  <rect x="384" y="338" width="212" height="170" rx="10" fill="#0d0d14" stroke="#4a4a3a" stroke-width="1"/>
+  <text x="490" y="374" text-anchor="middle" font-size="24">⚡</text>
+  <text x="490" y="399" text-anchor="middle" fill="#e0e0ec" font-size="14" font-weight="600">Agent</text>
+  <text x="490" y="420" text-anchor="middle" fill="#777" font-size="11">Persistent runtime on</text>
+  <text x="490" y="435" text-anchor="middle" fill="#777" font-size="11">OpenClaw. Drives action.</text>
+  <rect x="455" y="446" width="70" height="18" rx="3" fill="#2a2a1a"/>
+  <text x="490" y="459" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="600">WHAT IT DOES</text>
+
+  <!-- MCP Server -->
+  <rect x="604" y="338" width="212" height="170" rx="10" fill="#0d0d14" stroke="#3a4a5a" stroke-width="1"/>
+  <text x="710" y="374" text-anchor="middle" font-size="24">🔌</text>
+  <text x="710" y="399" text-anchor="middle" fill="#e0e0ec" font-size="14" font-weight="600">MCP Server</text>
+  <text x="710" y="420" text-anchor="middle" fill="#777" font-size="11">Exposes context &amp; judgment</text>
+  <text x="710" y="435" text-anchor="middle" fill="#777" font-size="11">to external tools via /collab</text>
+  <rect x="667" y="446" width="86" height="18" rx="3" fill="#1a2a3a"/>
+  <text x="710" y="459" text-anchor="middle" fill="#60a5fa" font-size="9" font-weight="600">HOW IT CONNECTS</text>
+
+  <!-- Internal connectors (subtle lines between core components) -->
+  <!-- Persona ↔ Ontology -->
+  <line x1="596" y1="240" x2="604" y2="240" stroke="#2a2a38" stroke-width="1" stroke-dasharray="4,3"/>
+  <!-- Persona ↔ Agent -->
+  <line x1="490" y1="324" x2="490" y2="338" stroke="#2a2a38" stroke-width="1" stroke-dasharray="4,3"/>
+  <!-- Ontology ↔ MCP -->
+  <line x1="710" y1="324" x2="710" y2="338" stroke="#2a2a38" stroke-width="1" stroke-dasharray="4,3"/>
+  <!-- Agent ↔ MCP -->
+  <line x1="596" y1="424" x2="604" y2="424" stroke="#2a2a38" stroke-width="1" stroke-dasharray="4,3"/>
+  <!-- Diagonal: Persona ↔ MCP -->
+  <line x1="596" y1="290" x2="604" y2="370" stroke="#1a1a28" stroke-width="1" stroke-dasharray="4,3"/>
+  <!-- Diagonal: Ontology ↔ Agent -->
+  <line x1="604" y1="290" x2="596" y2="370" stroke="#1a1a28" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- ==================== FLOW ARROWS (right) ==================== -->
+  <line x1="850" y1="220" x2="920" y2="210" stroke="#333" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="850" y1="330" x2="920" y2="320" stroke="#333" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="850" y1="440" x2="920" y2="420" stroke="#333" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+  <!-- ==================== OUTPUT SURFACES (right) ==================== -->
+
+  <!-- Collaborator App -->
+  <rect x="930" y="160" width="240" height="80" rx="10" fill="#13131a" stroke="#2a2a35" stroke-width="1"/>
+  <text x="956" y="190" fill="#c8c8d4" font-size="14" font-weight="600">🖥️  Collaborator App</text>
+  <text x="956" y="207" fill="#666" font-size="11">Desktop, mobile, web</text>
+  <rect x="956" y="216" width="88" height="18" rx="4" fill="#1a2a2a" stroke="#2a4a4a" stroke-width="1"/>
+  <text x="1000" y="229" text-anchor="middle" fill="#22d3ee" font-size="10" font-weight="600">Dedicated UI</text>
+
+  <!-- Messaging -->
+  <rect x="930" y="270" width="240" height="80" rx="10" fill="#13131a" stroke="#2a2a35" stroke-width="1"/>
+  <text x="956" y="300" fill="#c8c8d4" font-size="14" font-weight="600">💬  Messaging</text>
+  <text x="956" y="317" fill="#666" font-size="11">Telegram, Discord, Slack</text>
+  <rect x="956" y="326" width="42" height="18" rx="4" fill="#2a1a2a" stroke="#4a2a4a" stroke-width="1"/>
+  <text x="977" y="339" text-anchor="middle" fill="#e879f9" font-size="10" font-weight="600">Chat</text>
+
+  <!-- /collab Skill -->
+  <rect x="930" y="380" width="240" height="80" rx="10" fill="#13131a" stroke="#2a2a35" stroke-width="1"/>
+  <text x="956" y="410" fill="#c8c8d4" font-size="14" font-weight="600">⌨️  /collab</text>
+  <text x="956" y="427" fill="#666" font-size="11">Claude Code, Codex, Cursor</text>
+  <rect x="956" y="436" width="66" height="18" rx="4" fill="#1a2a3a" stroke="#2a3a5a" stroke-width="1"/>
+  <text x="989" y="449" text-anchor="middle" fill="#60a5fa" font-size="10" font-weight="600">MCP Skill</text>
+
+  <!-- ==================== TAGLINE ==================== -->
+  <text x="600" y="580" text-anchor="middle" fill="#555" font-size="12" font-style="italic">
+    <tspan fill="#777" font-weight="500">collaborator.bot</tspan> — Thinks for itself. Creates with you.
+  </text>
+
+  <!-- Problem statement -->
+  <text x="600" y="620" text-anchor="middle" fill="#444" font-size="11" font-style="italic">"When everything is buildable, the bottleneck becomes knowing the right thing to build."</text>
+
+</svg>
