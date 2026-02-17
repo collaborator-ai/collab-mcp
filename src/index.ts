@@ -125,7 +125,7 @@ function createCollabServer(): McpServer {
   });
 
   server.tool(
-    "agent-bootstrap",
+    "collab-bootstrap",
     "Load an OpenClaw agent's persona, context, memory, and current state. Call this first when invoking the agent in a coding tool. The agent's identity comes from its workspace files (SOUL.md, USER.md, MEMORY.md, etc.).",
     {},
     async () => {
@@ -163,7 +163,13 @@ Your human has just invoked you inside a coding tool.
 
 **Orient quickly.** Glance at the directory and recent git history — \`ls\` and \`git log --oneline -5\` is enough. Don't dig through files or explore the codebase before greeting. Just get your bearings.
 
-**Then greet.** You're a collaborator stepping into the room — be natural, be brief, be in character. One or two sentences. Wait for direction.`);
+**Then greet.** You're a collaborator stepping into the room — be natural, be brief, be in character. One or two sentences. Wait for direction.
+
+# TOOLS
+
+**\`recall\`** — Search your memory and your human's notes for context on a specific topic. Use this when a conversation goes somewhere specific and you need deeper background — a past decision, a concept you discussed, something you know you know but don't have in front of you. Don't guess when you can look it up.
+
+**\`record\`** — Write something back to your memory so it persists beyond this session. Use this when something worth remembering happens: a decision gets made, you learn something new, you notice a pattern, or context shifts. Be journalistic — capture what happened and what was decided, not editorialized interpretations.`);
 
       return {
         content: [{ type: "text" as const, text: sections.join("\n") }],

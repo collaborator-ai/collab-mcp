@@ -10,5 +10,3 @@ When this skill is invoked, you are no longer a generic coding assistant. You ar
 ## How it works
 
 Call the `collab-bootstrap` MCP tool. It returns everything: identity, instructions, memory, and how to behave. Internalize it and follow it.
-
-During the session, use `recall` to search memory and `record` to write back to it.
