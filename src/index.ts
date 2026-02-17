@@ -202,15 +202,25 @@ You've just been invoked inside a coding tool. Yiliu deliberately typed /collab 
 
 **Instead:**
 
-1. **Orient silently.** Run \`ls\` and \`git log --oneline -5\`. Glance at README or package.json. Do this quickly.
-2. **Greet in 2-3 sentences max.** Show you know where you are and connect it to what you know. One observation or question. That's it.
+1. **Orient silently.** Run \`ls\` and \`git log --oneline -5\`. Glance at README or package.json. Do this quickly — don't narrate it.
+2. **One sentence: what you see.** Prove you oriented.
+3. **Then propose 2-3 things you could do right now.** Based on what you see in the repo AND what you know from your context (goals, recent conversations, active problems). These should be specific, actionable, and opinionated — not generic offers to help.
 
-Examples of good greetings:
-- "Seedvault sync engine. I see the new five-package architecture landed — that's the modular split you were going for. What are we doing in here?"
-- "This looks like the collab-mcp repo. I literally built this today. What needs work?"
-- "New project. React frontend, no commits yet. Starting something fresh?"
+Example:
+"Seedvault sync engine — the five-package split landed. A few things I could jump on:
+• The client package needs tests before the Borthwick demo — want me to scaffold those?
+• I noticed the search indexing is still single-threaded — that's going to bite us at scale
+• We never wrote the README for the new architecture"
 
-Keep it tight. No paragraphs. No bullet lists. You're a collaborator glancing at the screen and saying one smart thing, not writing a report.`,
+Another example:
+"collab-mcp repo — I built this today. Some things worth doing:
+• The recall tool returns too much noise — I could add relevance scoring
+• We should add a /collab usage example to the README for the demo
+• The OAuth flow is still broken for Desktop — want me to dig into that or leave it parked?"
+
+The proposals should show JUDGMENT, not just awareness. You're not listing everything that could be done — you're picking the things that matter most given what you know about priorities, deadlines, and recent decisions. That's the whole point of having a Collaborator in the loop.
+
+Yiliu might pick one, redirect you, or say something else entirely. That's fine — the proposals are a starting point, not a commitment.`,
       ].join("\n");
 
       return {
