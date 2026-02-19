@@ -8,11 +8,15 @@ import { mcpAuthRouter, getOAuthProtectedResourceMetadataUrl, createOAuthMetadat
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { readFile, readdir, appendFile, mkdir } from "fs/promises";
+import { readFile, readdir, appendFile, mkdir, stat } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
+import { createReadStream } from "fs";
+import { createInterface } from "readline";
 // --- Configuration ---
-const WORKSPACE = process.env.OPENCLAW_WORKSPACE || process.env.COLLAB_WORKSPACE || join(process.env.HOME || "~", ".openclaw/workspace");
+const OPENCLAW_ROOT = process.env.OPENCLAW_ROOT || join(process.env.HOME || "~", ".openclaw");
+const WORKSPACE = join(OPENCLAW_ROOT, "workspace");
+const SESSIONS_DIR = join(OPENCLAW_ROOT, "agents", "main", "sessions");
 const SV_SERVER = process.env.SV_SERVER || "https://seedvault.fly.dev";
 const SV_TOKEN = process.env.SV_TOKEN || "";
 const SV_CONTRIBUTOR = process.env.SV_CONTRIBUTOR || "";
@@ -160,6 +164,112 @@ async function searchSeedvault(query) {
         return `Seedvault search error: ${e}`;
     }
 }
+async function getActiveSessionId() {
+    try {
+        const sessionsIndex = JSON.parse(await readFile(join(SESSIONS_DIR, "sessions.json"), "utf-8"));
+        // Find the main session, or the most recently updated one
+        const sessions = Array.isArray(sessionsIndex) ? sessionsIndex : sessionsIndex.sessions || [];
+        const main = sessions.find((s) => s.key?.includes("main"));
+        if (main)
+            return main.id;
+        // Fallback: find the most recently modified .jsonl file
+        const files = await readdir(SESSIONS_DIR);
+        const jsonlFiles = files.filter((f) => f.endsWith(".jsonl") && !f.includes(".deleted") && !f.includes(".lock"));
+        if (!jsonlFiles.length)
+            return null;
+        let newest = { file: "", mtime: 0 };
+        for (const f of jsonlFiles) {
+            const s = await stat(join(SESSIONS_DIR, f));
+            if (s.mtimeMs > newest.mtime) {
+                newest = { file: f, mtime: s.mtimeMs };
+            }
+        }
+        return newest.file.replace(".jsonl", "") || null;
+    }
+    catch {
+        return null;
+    }
+}
+async function getRecentSessionMessages(limit = 30, maxWords = 500) {
+    const sessionId = await getActiveSessionId();
+    if (!sessionId)
+        return "_No active session found._";
+    const sessionFile = join(SESSIONS_DIR, `${sessionId}.jsonl`);
+    try {
+        // Read all lines then take the last N — simpler than streaming backwards
+        const lines = [];
+        const rl = createInterface({
+            input: createReadStream(sessionFile, { encoding: "utf-8" }),
+            crlfDelay: Infinity,
+        });
+        for await (const line of rl) {
+            if (line.trim())
+                lines.push(line);
+        }
+        // Parse and filter to user/assistant messages only
+        const messages = [];
+        for (const line of lines.slice(-limit * 3)) { // read extra to account for filtered-out entries
+            try {
+                const entry = JSON.parse(line);
+                if (entry.type !== "message")
+                    continue;
+                const role = entry.message?.role;
+                if (role !== "user" && role !== "assistant")
+                    continue;
+                let text = "";
+                const content = entry.message?.content;
+                if (typeof content === "string") {
+                    text = content;
+                }
+                else if (Array.isArray(content)) {
+                    text = content
+                        .filter((c) => c.type === "text" && c.text)
+                        .map((c) => c.text)
+                        .join("\n");
+                }
+                if (!text.trim())
+                    continue;
+                // Skip heartbeat polls and HEARTBEAT_OK responses
+                if (text.includes("Read HEARTBEAT.md if it exists") || text.trim() === "HEARTBEAT_OK")
+                    continue;
+                // Skip NO_REPLY
+                if (text.trim() === "NO_REPLY")
+                    continue;
+                messages.push({
+                    role,
+                    text: text.trim(),
+                    time: entry.timestamp || "",
+                });
+            }
+            catch {
+                continue;
+            }
+        }
+        const candidates = messages.slice(-limit);
+        if (!candidates.length)
+            return "_No recent conversation messages found._";
+        // Walk backwards from most recent, collecting messages until word cap
+        const selected = [];
+        let wordCount = 0;
+        for (let i = candidates.length - 1; i >= 0; i--) {
+            const words = candidates[i].text.split(/\s+/).length;
+            if (wordCount + words > maxWords && selected.length > 0)
+                break;
+            selected.unshift(candidates[i]);
+            wordCount += words;
+        }
+        return selected
+            .map((m) => {
+            const who = m.role === "user" ? "Human" : "Collaborator";
+            const time = m.time ? `[${m.time.slice(11, 16)} UTC] ` : "";
+            return `**${who}** ${time}\n${m.text}`;
+        })
+            .join("\n\n");
+    }
+    catch (e) {
+        return `_Error reading session: ${e}_`;
+    }
+}
 // --- MCP Server Factory ---
 function createCollabServer() {
     const server = new McpServer({
@@ -195,6 +305,11 @@ function createCollabServer() {
         const ontology = await getLatestOntologySynthesis();
         if (ontology) {
             sections.push(`\n## Ontology\n\nThis is the current map of your human's thinking — entities, relations, and alignments (confirmations and tensions). Use it to inform your judgment.\n\n${ontology}`);
+        }
+        // Load recent conversation context (up to 30 messages, capped at ~500 words, most recent first)
+        const recentConversation = await getRecentSessionMessages(30, 500);
+        if (recentConversation && !recentConversation.startsWith("_No")) {
+            sections.push(`\n## Recent Conversation\n\nThese are the most recent messages from your active conversation with your human. Use them to understand what's been discussed, decisions made, and current focus.\n\n${recentConversation}`);
         }
         sections.push(`\n---
 # HOW TO WAKE UP
@@ -605,7 +720,9 @@ async function startStdio() {
 }
 // --- Main ---
 async function main() {
+    console.error(`OpenClaw root: ${OPENCLAW_ROOT}`);
     console.error(`Workspace: ${WORKSPACE}`);
+    console.error(`Sessions: ${SESSIONS_DIR}`);
     if (TRANSPORT === "stdio") {
         await startStdio();
     }
