@@ -365,6 +365,114 @@ Your human has just invoked you inside a coding tool. The reason you're here is 
   );
 
   server.tool(
+    "transcript",
+    "Retrieve a cleaned-up conversation transcript from the agent's main session for a given date. Returns user and assistant messages only — no tool calls, system messages, or errors. Output is a markdown transcript with timestamps and attribution.",
+    {
+      date: z.string().optional().describe("Date to retrieve transcript for, in YYYY-MM-DD format (UTC). Defaults to today."),
+    },
+    async ({ date }) => {
+      const targetDate = date || new Date().toISOString().slice(0, 10);
+      // Validate date format
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+        return {
+          content: [{ type: "text" as const, text: `Invalid date format: "${targetDate}". Use YYYY-MM-DD.` }],
+          isError: true,
+        };
+      }
+
+      const sessionId = await getActiveSessionId();
+      if (!sessionId) {
+        return {
+          content: [{ type: "text" as const, text: "_No active session found._" }],
+        };
+      }
+
+      const sessionFile = join(SESSIONS_DIR, `${sessionId}.jsonl`);
+
+      try {
+        const lines: string[] = [];
+        const rl = createInterface({
+          input: createReadStream(sessionFile, { encoding: "utf-8" }),
+          crlfDelay: Infinity,
+        });
+
+        for await (const line of rl) {
+          if (line.trim()) lines.push(line);
+        }
+
+        const messages: Array<{ role: string; name: string; text: string; time: string }> = [];
+
+        for (const line of lines) {
+          try {
+            const entry: SessionMessage = JSON.parse(line);
+            if (entry.type !== "message") continue;
+
+            // Filter by date using timestamp
+            const ts = entry.timestamp || "";
+            if (!ts.startsWith(targetDate)) continue;
+
+            const role = entry.message?.role;
+            if (role !== "user" && role !== "assistant") continue;
+
+            let text = "";
+            const content = entry.message?.content;
+            if (typeof content === "string") {
+              text = content;
+            } else if (Array.isArray(content)) {
+              text = content
+                .filter((c: { type: string; text?: string }) => c.type === "text" && c.text)
+                .map((c: { type: string; text?: string }) => c.text)
+                .join("\n");
+            }
+
+            if (!text.trim()) continue;
+
+            // Filter out heartbeats, NO_REPLY, HEARTBEAT_OK
+            const trimmed = text.trim();
+            if (trimmed === "HEARTBEAT_OK" || trimmed === "NO_REPLY") continue;
+            if (trimmed.startsWith("Read HEARTBEAT.md if it exists")) continue;
+
+            // Extract human name from Telegram-style messages: [Telegram Name (@handle)...]
+            let name = role === "assistant" ? "Collin" : "Human";
+            if (role === "user") {
+              const telegramMatch = text.match(/^\[Telegram\s+(\S+)/);
+              if (telegramMatch) {
+                name = telegramMatch[1];
+              }
+            }
+
+            const timeStr = ts.slice(11, 16);
+            messages.push({ role, name, text: trimmed, time: timeStr });
+          } catch {
+            continue;
+          }
+        }
+
+        if (!messages.length) {
+          return {
+            content: [{ type: "text" as const, text: `_No conversation messages found for ${targetDate}._` }],
+          };
+        }
+
+        // Build markdown transcript
+        const header = `# Conversation — ${targetDate}\n`;
+        const body = messages
+          .map((m) => `**${m.name}** [${m.time} UTC]\n${m.text}`)
+          .join("\n\n");
+
+        return {
+          content: [{ type: "text" as const, text: header + "\n" + body }],
+        };
+      } catch (e) {
+        return {
+          content: [{ type: "text" as const, text: `_Error reading session transcript: ${e}_` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
     "recall",
     "Search the agent's memory and connected notes for context on a specific topic. Searches local workspace files and Seedvault (if configured).",
     {
